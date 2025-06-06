@@ -11,9 +11,12 @@ import {
   CheckCircle,
   Sparkles,
   Rocket,
-  Shield
+  Shield,
+  User,
+  LogIn
 } from 'lucide-react';
 import { useHealth } from '@/hooks/useApi';
+import { useSession, ExtendedUser } from '@/lib/auth-client';
 
 const features = [
   {
@@ -63,6 +66,7 @@ const steps = [
 
 export default function HomePage() {
   const { checkHealth, data: healthData } = useHealth();
+  const { data: session } = useSession();
   const [apiStatus, setApiStatus] = useState<'checking' | 'online' | 'offline'>('checking');
 
   useEffect(() => {
@@ -80,6 +84,25 @@ export default function HomePage() {
 
   return (
     <div className="space-y-16">
+      {/* Welcome Section for Authenticated Users */}
+      {session?.user && (
+        <section className="bg-gradient-to-r from-[var(--primary)]/10 to-[var(--secondary)] rounded-xl p-6">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center justify-center w-12 h-12 bg-[var(--primary)] rounded-lg">
+              <User className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-[var(--foreground)]">
+                Welcome back, {(session.user as ExtendedUser).displayName || session.user.name || 'Developer'}!
+              </h2>
+              <p className="text-[var(--muted-foreground)]">
+                Ready to create your next amazing Minecraft plugin?
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Hero Section */}
       <section className="text-center space-y-8">
         <div className="space-y-4">
@@ -106,30 +129,53 @@ export default function HomePage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link 
-            href="/create" 
-            className="btn-primary inline-flex items-center justify-center space-x-2 text-lg px-8 py-4"
-          >
-            <Rocket className="w-5 h-5" />
-            <span>Start Creating</span>
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-          
-          <Link 
-            href="/chat" 
-            className="btn-secondary inline-flex items-center justify-center space-x-2 text-lg px-8 py-4"
-          >
-            <MessageSquare className="w-5 h-5" />
-            <span>Chat with AI</span>
-          </Link>
-          
-          <Link 
-            href="/plugins" 
-            className="btn-secondary inline-flex items-center justify-center space-x-2 text-lg px-8 py-4"
-          >
-            <Code className="w-5 h-5" />
-            <span>Browse Plugins</span>
-          </Link>
+          {session?.user ? (
+            <>
+              <Link 
+                href="/create" 
+                className="btn-primary inline-flex items-center justify-center space-x-2 text-lg px-8 py-4"
+              >
+                <Rocket className="w-5 h-5" />
+                <span>Start Creating</span>
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              
+              <Link 
+                href="/chat" 
+                className="btn-secondary inline-flex items-center justify-center space-x-2 text-lg px-8 py-4"
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span>Chat with AI</span>
+              </Link>
+              
+              <Link 
+                href="/plugins" 
+                className="btn-secondary inline-flex items-center justify-center space-x-2 text-lg px-8 py-4"
+              >
+                <Code className="w-5 h-5" />
+                <span>My Plugins</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link 
+                href="/auth/signin" 
+                className="btn-primary inline-flex items-center justify-center space-x-2 text-lg px-8 py-4"
+              >
+                <LogIn className="w-5 h-5" />
+                <span>Sign In to Start</span>
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              
+              <Link 
+                href="/chat" 
+                className="btn-secondary inline-flex items-center justify-center space-x-2 text-lg px-8 py-4"
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span>Try Chat Demo</span>
+              </Link>
+            </>
+          )}
         </div>
       </section>
 

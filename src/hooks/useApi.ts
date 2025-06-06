@@ -53,14 +53,11 @@ export const usePluginGeneration = () => {
 export const usePluginChat = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Array<{
-    id: string;
-    message: string;
-    response: string;
-    timestamp: Date;
-  }>>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [currentConversation, setCurrentConversation] = useState<string | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
 
-  const sendMessage = useCallback(async (request: ChatRequest) => {
+  const sendMessage = useCallback(async (request: ChatRequest & { conversationId?: string }) => {
     setLoading(true);
     setError(null);
 
@@ -71,13 +68,9 @@ export const usePluginChat = () => {
         throw new Error(response.error || 'Failed to send message');
       }
 
-      if (response.response) {
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          message: request.message,
-          response: response.response!,
-          timestamp: new Date(),
-        }]);
+      // Update current conversation if provided
+      if (response.conversationId) {
+        setCurrentConversation(response.conversationId);
       }
 
       return response;
@@ -90,12 +83,122 @@ export const usePluginChat = () => {
     }
   }, []);
 
+  const loadConversations = useCallback(async (pluginName?: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.getChatHistory(pluginName);
+      if (response.success) {
+        setConversations(response.conversations || []);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load conversations';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadMessages = useCallback(async (conversationId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.getChatHistory(undefined, conversationId);
+      if (response.success) {
+        setMessages(response.messages || []);
+        setCurrentConversation(conversationId);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load messages';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const deleteConversation = useCallback(async (conversationId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await apiClient.deleteConversation(conversationId);
+      if (response.success) {
+        setConversations(prev => prev.filter(conv => conv._id !== conversationId));
+        if (currentConversation === conversationId) {
+          setCurrentConversation(null);
+          setMessages([]);
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete conversation';
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentConversation]);
+
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
+    setCurrentConversation(null);
   }, []);
 
-  return { sendMessage, loading, error, messages, clearMessages };
+  return { 
+    sendMessage, 
+    loadConversations, 
+    loadMessages, 
+    deleteConversation, 
+    clearMessages, 
+    loading, 
+    error, 
+    conversations, 
+    messages, 
+    currentConversation 
+  };
+};
+
+export const useUserPlugins = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [plugins, setPlugins] = useState<any[]>([]);
+
+  const loadUserPlugins = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const userPlugins = await apiClient.getUserPlugins();
+      setPlugins(userPlugins);
+      return userPlugins;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load user plugins';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const savePlugin = useCallback(async (pluginName: string, pluginData?: any, status?: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const pluginId = await apiClient.saveUserPlugin(pluginName, pluginData, status);
+      await loadUserPlugins(); // Refresh the list
+      return pluginId;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save plugin';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [loadUserPlugins]);
+
+  return { loadUserPlugins, savePlugin, loading, error, plugins };
 };
 
 export const usePluginList = () => {

@@ -1,0 +1,106 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { DatabaseService } from '@/lib/database';
+
+const API_BASE_URL = process.env.API_BASE_URL || 'http://37.114.41.124:3000';
+
+export async function POST(request: NextRequest) {
+  try {
+    // Get user session
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    console.log('Received chat request:', JSON.stringify(body, null, 2));
+    
+    const { message, pluginName, conversationId } = body;
+
+    if (!message || !pluginName) {
+      console.log('Missing required fields:', { message: !!message, pluginName: !!pluginName });
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Message and plugin name are required' 
+      }, { status: 400 });
+    }
+
+    // Create new conversation if not provided
+    let currentConversationId = conversationId;
+    if (!currentConversationId) {
+      console.log(`Creating new conversation for user ${session.user.id} and plugin ${pluginName}`);
+      try {
+        currentConversationId = await DatabaseService.createConversation(
+          session.user.id,
+          pluginName,
+          message
+        );
+        console.log(`Created new conversation with ID: ${currentConversationId}`);
+      } catch (error) {
+        console.error('Failed to create conversation:', error);
+        // Continue without conversation ID if creation fails
+      }
+    }
+
+    // Send message to external API using the documented format
+    console.log(`Sending request to external API: ${API_BASE_URL}/create/chat`);
+    const response = await fetch(`${API_BASE_URL}/create/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message,
+        name: pluginName, // Use name as expected by the backend instead of pluginName
+        previousContext: body.previousContext
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`External API error: Status ${response.status}`);
+      const errorText = await response.text().catch(() => 'Could not read error response');
+      console.error(`Error details: ${errorText}`);
+      return NextResponse.json({
+        success: false,
+        error: `External API responded with status: ${response.status}`
+      }, { status: response.status });
+    }
+
+    const apiData = await response.json();
+
+    // Determine message type (info or modification) based on response
+    const messageType = apiData.operations && apiData.operations.length > 0 ? 'modification' : 'info';
+
+    // Save chat message to database
+    const messageId = await DatabaseService.saveChatMessage({
+      userId: session.user.id,
+      pluginName,
+      message,
+      response: apiData.response,
+      messageType,
+      operations: apiData.operations,
+      compilationResult: apiData.compilationResult,
+      conversationId: currentConversationId,
+    });
+
+    // Update plugin status if compilation occurred
+    if (apiData.compilationResult) {
+      const status = apiData.compilationResult.success ? 'success' : 'failed';
+      await DatabaseService.updatePluginStatus(session.user.id, pluginName, status);
+    }
+
+    return NextResponse.json({
+      ...apiData,
+      messageId,
+      conversationId: currentConversationId,
+      success: true
+    });
+
+  } catch (error) {
+    console.error('Failed to chat with plugin:', error);
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
+}

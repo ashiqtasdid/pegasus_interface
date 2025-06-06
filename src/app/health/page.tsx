@@ -278,16 +278,16 @@ export default function HealthPage() {
           
           <MetricCard
             title="Memory Usage"
-            value={data.memory ? `${data.memory.percentage}%` : 'N/A'}
-            subvalue={data.memory ? `${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)}` : undefined}
+            value={data.system?.memory ? 'Available' : 'N/A'}
+            subvalue={data.system?.memory ? `Heap: ${data.system.memory.heapUsed} / ${data.system.memory.heapTotal}` : undefined}
             icon={HardDrive}
-            status={data.memory && data.memory.percentage > 90 ? 'degraded' : data.memory && data.memory.percentage > 95 ? 'down' : 'ok'}
+            status="ok"
           />
           
           <MetricCard
             title="Services"
-            value={data.services ? Object.values(data.services).filter(s => s.status === 'up').length : 0}
-            subvalue={data.services ? `of ${Object.keys(data.services).length} running` : undefined}
+            value={data.services ? data.services.filter(s => s.status === 'healthy').length : 0}
+            subvalue={data.services ? `of ${data.services.length} running` : undefined}
             icon={Server}
             status="ok"
           />
@@ -309,32 +309,29 @@ export default function HealthPage() {
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {data.services.database && (
-              <ServiceCard
-                name="Database"
-                status={data.services.database.status}
-                responseTime={data.services.database.responseTime}
-                icon={Database}
-              />
-            )}
-            
-            {data.services.geminiAI && (
-              <ServiceCard
-                name="Gemini AI"
-                status={data.services.geminiAI.status}
-                responseTime={data.services.geminiAI.responseTime}
-                icon={Zap}
-              />
-            )}
-            
-            {data.services.compiler && (
-              <ServiceCard
-                name="Java Compiler"
-                status={data.services.compiler.status}
-                details={data.services.compiler.jdkVersion ? { jdkVersion: data.services.compiler.jdkVersion } : undefined}
-                icon={Cpu}
-              />
-            )}
+            {data.services.map((service, index) => {
+              const getServiceIcon = (serviceName: string) => {
+                if (serviceName.toLowerCase().includes('database')) return Database;
+                if (serviceName.toLowerCase().includes('gemini') || serviceName.toLowerCase().includes('ai')) return Zap;
+                if (serviceName.toLowerCase().includes('compiler') || serviceName.toLowerCase().includes('java')) return Cpu;
+                return Server;
+              };
+
+              const convertStatus = (status: string): 'up' | 'down' => {
+                return status === 'healthy' ? 'up' : 'down';
+              };
+
+              return (
+                <ServiceCard
+                  key={index}
+                  name={service.name}
+                  status={convertStatus(service.status)}
+                  responseTime={service.responseTime}
+                  details={service.errors?.length > 0 ? { errors: service.errors.length } : undefined}
+                  icon={getServiceIcon(service.name)}
+                />
+              );
+            })}
           </div>
         </div>
       )}

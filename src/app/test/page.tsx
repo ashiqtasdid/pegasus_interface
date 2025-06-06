@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { apiClient } from '../../lib/api';
+import withAuth from '@/components/withAuth';
 
 function TestPage() {
   const [result, setResult] = useState<string>('');
@@ -85,4 +86,5 @@ function TestPage() {
   );
 }
 
-export default TestPage;
+// Export with authentication protection
+export default withAuth(TestPage);

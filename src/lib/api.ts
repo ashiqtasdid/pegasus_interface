@@ -78,10 +78,10 @@ class ApiClient {
     }
   }
 
-  // Plugin Chat
-  async chatWithPlugin(data: ChatRequest): Promise<{ success: boolean; response?: string; error?: string }> {
+  // Plugin Chat with new database integration
+  async chatWithPlugin(data: ChatRequest & { conversationId?: string }): Promise<{ success: boolean; response?: string; error?: string; messageId?: string; conversationId?: string; operations?: any[]; compilationResult?: any }> {
     try {
-      const url = `${this.baseUrl}/chat`;
+      const url = `${this.baseUrl}/chat/send`;
       
       // Create abort controller for timeout
       const controller = new AbortController();
@@ -106,7 +106,7 @@ class ApiClient {
       }
 
       const result = await response.json();
-      return result; // API now returns { success, response?, error? }
+      return result;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return {
@@ -119,6 +119,74 @@ class ApiClient {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred'
       };
+    }
+  }
+
+  // Chat history management
+  async getChatHistory(pluginName?: string, conversationId?: string): Promise<any> {
+    try {
+      const params = new URLSearchParams();
+      if (pluginName) params.append('pluginName', pluginName);
+      if (conversationId) params.append('conversationId', conversationId);
+      
+      const response = await fetch(`${this.baseUrl}/chat/history?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to get chat history:', error);
+      throw error;
+    }
+  }
+
+  async deleteConversation(conversationId: string): Promise<{ success: boolean }> {
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/history?conversationId=${conversationId}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to delete conversation:', error);
+      throw error;
+    }
+  }
+
+  // User plugins management
+  async getUserPlugins(): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/plugins/user`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.plugins || [];
+    } catch (error) {
+      console.error('Failed to get user plugins:', error);
+      throw error;
+    }
+  }
+
+  async saveUserPlugin(pluginName: string, pluginData?: any, status?: string): Promise<string> {
+    try {
+      const response = await fetch(`${this.baseUrl}/plugins/user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pluginName, pluginData, status }),
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.pluginId;
+    } catch (error) {
+      console.error('Failed to save user plugin:', error);
+      throw error;
     }
   }
 

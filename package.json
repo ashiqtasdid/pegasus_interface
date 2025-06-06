@@ -3,13 +3,19 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev --turbopack -p 3001",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "next start -p 3001",
+    "lint": "next lint",
+    "docker:build": "docker build -t pegasus-interface .",
+    "docker:run": "docker run -p 3001:3001 --env-file .env.production pegasus-interface",
+    "deploy": "./deploy.sh",
+    "health": "curl -f http://localhost:3001/api/health"
   },
   "dependencies": {
+    "better-auth": "^1.2.8",
     "lucide-react": "^0.513.0",
+    "mongodb": "^6.17.0",
     "next": "15.3.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

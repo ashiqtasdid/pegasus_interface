@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import withAuth from '@/components/withAuth';
 
-export default function DebugPage() {
+function DebugPage() {
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -173,3 +174,6 @@ export default function DebugPage() {
     </div>
   );
 }
+
+// Export with authentication protection
+export default withAuth(DebugPage);

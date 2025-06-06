@@ -65,7 +65,7 @@ export interface GeneratePluginResponse {
 
 export interface ChatRequest {
   message: string;
-  name: string;
+  pluginName: string; // Changed from 'name' to 'pluginName' to match component usage
   conversationId?: string;
 }
 

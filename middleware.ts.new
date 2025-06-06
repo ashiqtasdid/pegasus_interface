@@ -1,0 +1,73 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
+
+// Define exact paths that are public (accessible without authentication)
+const PUBLIC_PATHS = ['/', '/auth/signin', '/auth/signup'];
+
+// Define API paths that should be accessible without authentication
+const PUBLIC_API_PATHS = ['/api/health'];
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  
+  // Skip authentication check for auth API routes
+  if (pathname.startsWith('/api/auth/')) {
+    return NextResponse.next();
+  }
+
+  // Skip middleware for static assets
+  if (
+    pathname.startsWith('/_next/') || 
+    pathname.startsWith('/favicon.ico') || 
+    pathname.includes('.') // Files with extensions
+  ) {
+    return NextResponse.next();
+  }
+
+  // Check if user is authenticated
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  });
+  
+  const isAuthenticated = !!session;
+  
+  // Allow access to public paths
+  if (PUBLIC_PATHS.includes(pathname)) {
+    // If user is already authenticated and trying to access auth pages, redirect to home
+    if (isAuthenticated && (pathname === '/auth/signin' || pathname === '/auth/signup')) {
+      const returnTo = request.nextUrl.searchParams.get('returnTo') || '/';
+      return NextResponse.redirect(new URL(returnTo, request.url));
+    }
+    return NextResponse.next();
+  }
+  
+  // Allow access to public API paths
+  if (PUBLIC_API_PATHS.some(path => pathname.startsWith(path))) {
+    return NextResponse.next();
+  }
+  
+  // For all other paths, redirect to sign-in if not authenticated
+  if (!isAuthenticated) {
+    console.log(`[AUTH] Redirecting from ${pathname} to sign-in page`);
+    const signInUrl = new URL('/auth/signin', request.url);
+    signInUrl.searchParams.set('returnTo', pathname);
+    return NextResponse.redirect(signInUrl);
+  }
+  
+  // User is authenticated and accessing a protected route
+  return NextResponse.next();
+}
+
+// Configure which routes this middleware applies to
+export const config = {
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
+};

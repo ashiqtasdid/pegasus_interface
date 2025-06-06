@@ -85,7 +85,7 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
         // Chat with specific plugin
         await sendMessage({
           message: messageToSend,
-          name: selectedPlugin,
+          pluginName: selectedPlugin,
         });
       } else {
         // General AI chat (create a temporary message for general questions)

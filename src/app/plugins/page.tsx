@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { usePluginList } from '@/hooks/useApi';
 import { downloadPluginFile } from '@/lib/api';
+import withAuth from '@/components/withAuth';
 
 const PluginCard: React.FC<{
   pluginName: string;
@@ -87,7 +88,7 @@ const FilterBar: React.FC<{
   );
 };
 
-export default function PluginsPage() {
+function PluginsPage() {
   const { fetchPlugins, loading, error, data } = usePluginList();
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -203,3 +204,6 @@ export default function PluginsPage() {
     </div>
   );
 }
+
+// Export with authentication protection
+export default withAuth(PluginsPage);

@@ -10,8 +10,13 @@ import {
   FolderOpen, 
   Heart,
   Code,
-  Zap
+  Zap,
+  User,
+  LogIn,
+  LogOut,
+  ChevronDown
 } from 'lucide-react';
+import { useSession, signOut, ExtendedUser } from '@/lib/auth-client';
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
@@ -27,6 +32,32 @@ interface NavigationProps {
 
 export const Navigation: React.FC<NavigationProps> = ({ children }) => {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const [showUserMenu, setShowUserMenu] = React.useState(false);
+  const userMenuRef = React.useRef<HTMLDivElement>(null);
+
+  // Close user menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    };
+
+    if (showUserMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showUserMenu]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setShowUserMenu(false);
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
@@ -48,7 +79,7 @@ export const Navigation: React.FC<NavigationProps> = ({ children }) => {
               </div>
             </div>
             
-            <nav className="hidden md:flex space-x-1">
+            <nav className="hidden md:flex items-center space-x-1">
               {navigation.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -66,6 +97,52 @@ export const Navigation: React.FC<NavigationProps> = ({ children }) => {
                   </Link>
                 );
               })}
+              
+              {/* User Menu */}
+              <div className="relative ml-4" ref={userMenuRef}>
+                {session?.user ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowUserMenu(!showUserMenu)}
+                      className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-all"
+                    >
+                      <User className="w-4 h-4" />
+                      <span>{(session.user as ExtendedUser).displayName || session.user.name || session.user.email}</span>
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+                    
+                    {showUserMenu && (
+                      <div className="absolute right-0 mt-2 w-48 bg-[var(--secondary)] border border-[var(--border)] rounded-lg shadow-lg z-50">
+                        <div className="py-1">
+                          <Link
+                            href="/profile"
+                            onClick={() => setShowUserMenu(false)}
+                            className="flex items-center space-x-2 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+                          >
+                            <User className="w-4 h-4" />
+                            <span>Profile</span>
+                          </Link>
+                          <button
+                            onClick={handleSignOut}
+                            className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            <span>Sign Out</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <Link
+                    href="/auth/signin"
+                    className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90 transition-all"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Sign In</span>
+                  </Link>
+                )}
+              </div>
             </nav>
           </div>
         </div>

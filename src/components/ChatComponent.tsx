@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  MessageSquare, 
   Send, 
   Bot, 
   User, 
@@ -22,6 +21,13 @@ interface Message {
   content: string;
   timestamp: Date;
   pluginName?: string;
+}
+
+interface ApiMessage {
+  id?: string | number;
+  message?: string;
+  response?: string;
+  timestamp?: string | Date | number;
 }
 
 interface ChatComponentProps {
@@ -55,19 +61,20 @@ export const ChatComponent: React.FC<ChatComponentProps> = ({
   useEffect(() => {
     // Convert API messages to local messages format
     const convertedMessages: Message[] = [];
-    apiMessages.forEach(msg => {
+    apiMessages.forEach((msg: Record<string, unknown>) => {
+      const apiMsg = msg as ApiMessage;
       convertedMessages.push({
-        id: `${msg.id}-user`,
+        id: `${apiMsg.id || Date.now()}-user`,
         type: 'user',
-        content: msg.message,
-        timestamp: msg.timestamp,
+        content: String(apiMsg.message || ''),
+        timestamp: new Date(apiMsg.timestamp || Date.now()),
         pluginName: selectedPlugin
       });
       convertedMessages.push({
-        id: `${msg.id}-assistant`,
+        id: `${apiMsg.id || Date.now()}-assistant`,
         type: 'assistant',
-        content: msg.response,
-        timestamp: msg.timestamp,
+        content: String(apiMsg.response || ''),
+        timestamp: new Date(apiMsg.timestamp || Date.now()),
         pluginName: selectedPlugin
       });
     });

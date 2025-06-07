@@ -29,7 +29,7 @@ export interface ApiError {
   error: {
     code: string;
     message: string;
-    details?: any;
+    details?: Record<string, unknown>;
     timestamp: string;
   };
 }
@@ -41,7 +41,7 @@ export interface ApiResponse<T> {
   error?: {
     code: string;
     message: string;
-    details?: any;
+    details?: Record<string, unknown>;
     timestamp: string;
   };
 }
@@ -104,7 +104,7 @@ export interface HealthResponse {
     name: string;
     status: 'healthy' | 'degraded' | 'down';
     responseTime: number;
-    errors: any[];
+    errors: Array<Record<string, unknown>>;
   }>;
   system?: {
     platform: string;
@@ -117,7 +117,7 @@ export interface HealthResponse {
       heapUsed: string;
       external: string;
     };
-    metrics: any;
+    metrics: Record<string, unknown>;
   };
   recommendations?: string[];
 }

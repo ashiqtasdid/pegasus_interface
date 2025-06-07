@@ -14,17 +14,12 @@ import {
   User,
   LogIn,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  BarChart3,
+  Shield
 } from 'lucide-react';
 import { useSession, signOut, ExtendedUser } from '@/lib/auth-client';
-
-const navigation = [
-  { name: 'Home', href: '/', icon: Home },
-  { name: 'Create Plugin', href: '/create', icon: Plus },
-  { name: 'Chat with AI', href: '/chat', icon: MessageSquare },
-  { name: 'My Plugins', href: '/plugins', icon: FolderOpen },
-  { name: 'Health Status', href: '/health', icon: Heart },
-];
+import { useUserContext } from '@/hooks/useUserContext';
 
 interface NavigationProps {
   children: React.ReactNode;
@@ -33,8 +28,33 @@ interface NavigationProps {
 export const Navigation: React.FC<NavigationProps> = ({ children }) => {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { userContext } = useUserContext();
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const userMenuRef = React.useRef<HTMLDivElement>(null);
+
+  // Dynamic navigation based on user role and authentication
+  const getNavigationItems = () => {
+    const baseNavigation = [
+      { name: 'Home', href: '/', icon: Home },
+      { name: 'Create Plugin', href: '/create', icon: Plus },
+      { name: 'Chat with AI', href: '/chat', icon: MessageSquare },
+      { name: 'My Plugins', href: '/plugins', icon: FolderOpen },
+      { name: 'Health Status', href: '/health', icon: Heart },
+    ];
+
+    // Add admin-only navigation items
+    if (userContext?.role === 'admin') {
+      baseNavigation.splice(5, 0, {
+        name: 'Analytics',
+        href: '/analytics',
+        icon: BarChart3
+      });
+    }
+
+    return baseNavigation;
+  };
+
+  const navigation = getNavigationItems();
 
   // Close user menu when clicking outside
   React.useEffect(() => {
@@ -61,16 +81,19 @@ export const Navigation: React.FC<NavigationProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-[var(--background)]">
-      {/* Header */}
-      <header className="border-b border-[var(--border)] bg-[var(--secondary)]">
+      {/* Header with glassmorphism */}
+      <header className="sticky top-0 z-50 border-b border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-filter backdrop-blur-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-[var(--primary)] rounded-lg">
-                <Zap className="w-6 h-6 text-white" />
+          <div className="flex items-center justify-between h-20">
+            <div className="flex items-center space-x-4">
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                <div className="relative flex items-center justify-center w-12 h-12 bg-gradient-to-br from-[var(--primary)] to-[var(--primary-light)] rounded-xl shadow-lg">
+                  <Zap className="w-7 h-7 text-white" />
+                </div>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-[var(--foreground)]">
+                <h1 className="text-2xl font-bold gradient-text">
                   Pegasus Nest
                 </h1>
                 <p className="text-sm text-[var(--muted-foreground)]">
@@ -79,52 +102,78 @@ export const Navigation: React.FC<NavigationProps> = ({ children }) => {
               </div>
             </div>
             
-            <nav className="hidden md:flex items-center space-x-1">
+            <nav className="hidden md:flex items-center space-x-2">
               {navigation.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    className={`group relative flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 ${
                       isActive
-                        ? 'bg-[var(--primary)] text-white'
-                        : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]'
+                        ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] text-white shadow-lg shadow-[var(--primary)]/25'
+                        : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg)] hover:backdrop-blur-20'
                     }`}
                   >
-                    <item.icon className="w-4 h-4" />
+                    <item.icon className={`w-4 h-4 transition-transform group-hover:scale-110 ${
+                      isActive ? 'text-white' : ''
+                    }`} />
                     <span>{item.name}</span>
+                    {isActive && (
+                      <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] opacity-20 blur-sm"></div>
+                    )}
                   </Link>
                 );
               })}
               
-              {/* User Menu */}
-              <div className="relative ml-4" ref={userMenuRef}>
+              {/* Enhanced User Menu */}
+              <div className="relative ml-6" ref={userMenuRef}>
                 {session?.user ? (
                   <div className="relative">
                     <button
                       onClick={() => setShowUserMenu(!showUserMenu)}
-                      className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-all"
+                      className="group flex items-center space-x-3 px-4 py-2.5 rounded-xl text-sm font-semibold text-[var(--foreground)] bg-[var(--glass-bg)] border border-[var(--glass-border)] hover:bg-[var(--glass-bg)] hover:border-[var(--primary)] transition-all duration-300 backdrop-blur-20"
                     >
-                      <User className="w-4 h-4" />
-                      <span>{(session.user as ExtendedUser).displayName || session.user.name || session.user.email}</span>
-                      <ChevronDown className="w-3 h-3" />
+                      <div className="relative">
+                        <div className="w-8 h-8 bg-gradient-to-br from-[var(--primary)] to-[var(--primary-light)] rounded-lg flex items-center justify-center">
+                          <User className="w-4 h-4 text-white" />
+                        </div>
+                        {userContext?.role === 'admin' && (
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-[var(--accent-light)] rounded-full border-2 border-[var(--background)]"></div>
+                        )}
+                      </div>
+                      <div className="text-left">
+                        <div className="font-semibold">{(session.user as ExtendedUser).displayName || session.user.name || session.user.email}</div>
+                        <div className="text-xs text-[var(--muted-foreground)] capitalize">{userContext?.role || 'user'}</div>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 transition-transform group-hover:scale-110 ${showUserMenu ? 'rotate-180' : ''}`} />
                     </button>
                     
                     {showUserMenu && (
-                      <div className="absolute right-0 mt-2 w-48 bg-[var(--secondary)] border border-[var(--border)] rounded-lg shadow-lg z-50">
-                        <div className="py-1">
+                      <div className="absolute right-0 mt-3 w-56 bg-[var(--glass-bg)] border border-[var(--glass-border)] rounded-xl shadow-2xl backdrop-blur-20 z-50 overflow-hidden">
+                        <div className="p-2">
                           <Link
                             href="/profile"
                             onClick={() => setShowUserMenu(false)}
-                            className="flex items-center space-x-2 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+                            className="flex items-center space-x-3 px-3 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--glass-bg)] rounded-lg transition-all duration-200"
                           >
                             <User className="w-4 h-4" />
-                            <span>Profile</span>
+                            <span>Profile Settings</span>
                           </Link>
+                          {userContext?.role === 'admin' && (
+                            <Link
+                              href="/admin"
+                              onClick={() => setShowUserMenu(false)}
+                              className="flex items-center space-x-3 px-3 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--glass-bg)] rounded-lg transition-all duration-200"
+                            >
+                              <Shield className="w-4 h-4" />
+                              <span>Admin Panel</span>
+                            </Link>
+                          )}
+                          <hr className="my-2 border-[var(--glass-border)]" />
                           <button
                             onClick={handleSignOut}
-                            className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                            className="w-full flex items-center space-x-3 px-3 py-2.5 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-all duration-200"
                           >
                             <LogOut className="w-4 h-4" />
                             <span>Sign Out</span>
@@ -136,9 +185,9 @@ export const Navigation: React.FC<NavigationProps> = ({ children }) => {
                 ) : (
                   <Link
                     href="/auth/signin"
-                    className="flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium bg-[var(--primary)] text-white hover:bg-[var(--primary)]/90 transition-all"
+                    className="group flex items-center space-x-2 px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] text-white hover:shadow-lg hover:shadow-[var(--primary)]/25 transition-all duration-300"
                   >
-                    <LogIn className="w-4 h-4" />
+                    <LogIn className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     <span>Sign In</span>
                   </Link>
                 )}
@@ -148,20 +197,20 @@ export const Navigation: React.FC<NavigationProps> = ({ children }) => {
         </div>
       </header>
 
-      {/* Mobile Navigation */}
-      <div className="md:hidden border-b border-[var(--border)] bg-[var(--secondary)]">
-        <div className="px-4 py-3">
-          <nav className="flex space-x-1 overflow-x-auto">
+      {/* Enhanced Mobile Navigation */}
+      <div className="md:hidden border-b border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-20">
+        <div className="px-4 py-4">
+          <nav className="flex space-x-2 overflow-x-auto">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-300 ${
                     isActive
-                      ? 'bg-[var(--primary)] text-white'
-                      : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]'
+                      ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] text-white shadow-lg'
+                      : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--glass-bg)]'
                   }`}
                 >
                   <item.icon className="w-4 h-4" />
@@ -173,19 +222,21 @@ export const Navigation: React.FC<NavigationProps> = ({ children }) => {
         </div>
       </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content with enhanced spacing */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--border)] bg-[var(--secondary)] mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Enhanced Footer */}
+      <footer className="border-t border-[var(--glass-border)] bg-[var(--glass-bg)] backdrop-blur-20 mt-24">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-3 mb-4 md:mb-0">
-              <Code className="w-5 h-5 text-[var(--primary)]" />
-              <span className="text-[var(--muted-foreground)]">
-                Powered by AI • Built with Next.js
+            <div className="flex items-center space-x-4 mb-6 md:mb-0">
+              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-[var(--primary)] to-[var(--primary-light)] rounded-lg">
+                <Code className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-[var(--muted-foreground)] font-medium">
+                Powered by AI • Built with Next.js • Enhanced with Love
               </span>
             </div>
             <div className="text-sm text-[var(--muted-foreground)]">

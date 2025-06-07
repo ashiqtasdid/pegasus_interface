@@ -16,9 +16,9 @@ This guide will help you set up GitHub OAuth authentication for your Pegasus Nes
 2. **Fill out the OAuth App form**:
    ```
    Application Name: Pegasus Nest
-   Homepage URL: http://localhost:3000
+   Homepage URL: http://37.114.41.124:3000
    Application description: AI-powered plugin development platform
-   Authorization callback URL: http://localhost:3000/api/auth/callback/github
+   Authorization callback URL: http://37.114.41.124:3000/api/auth/callback/github
    ```
 
 3. **Create the application**
@@ -62,7 +62,7 @@ For production deployment, you'll need to:
    ```
 
 2. **Test GitHub sign-in**:
-   - Go to http://localhost:3000/auth/signin
+   - Go to http://37.114.41.124:3000/auth/signin
    - Click "Continue with GitHub"
    - You should be redirected to GitHub for authorization
    - After authorization, you'll be redirected back to your app
@@ -92,7 +92,7 @@ With GitHub OAuth integration, users can:
 
 2. **"Redirect URI mismatch" error**:
    - Verify the callback URL in your GitHub OAuth app matches exactly
-   - For localhost: `http://localhost:3000/api/auth/callback/github`
+   - For localhost: `http://37.114.41.124:3000/api/auth/callback/github`
 
 3. **"Invalid client secret" error**:
    - Regenerate the client secret in GitHub

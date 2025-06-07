@@ -107,7 +107,7 @@ src/
 3. **Test the System:**
    ```bash
    pnpm dev
-   # Visit http://localhost:3000
+   # Visit http://37.114.41.124:3000
    # Try signing up and signing in
    ```
 

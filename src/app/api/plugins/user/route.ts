@@ -51,10 +51,37 @@ export async function POST(request: NextRequest) {
 
     const pluginId = await DatabaseService.saveUserPlugin({
       userId: session.user.id,
+      pluginId: `plugin_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       pluginName,
-      pluginData: pluginData ? JSON.stringify(pluginData) : undefined,
+      displayName: pluginName,
+      description: pluginData?.description || '',
+      category: pluginData?.category || 'other',
+      tags: pluginData?.tags || [],
+      metadata: {
+        version: pluginData?.version || '1.0.0',
+        author: session.user.name || session.user.email || 'Unknown',
+        license: 'MIT',
+        dependencies: [],
+        permissions: [],
+        compatibility: ['spigot', 'paper'],
+        fileSize: 0,
+        entryPoint: `${pluginName}.java`
+      },
+      files: [],
+      mainFile: `${pluginName}.java`,
       status: status || 'pending',
-      downloadCount: 0,
+      analytics: {
+        downloadCount: 0,
+        uniqueDownloads: 0,
+        viewCount: 0,
+        installCount: 0,
+        reviewCount: 0,
+      },
+      versions: [],
+      currentVersion: '1.0.0',
+      visibility: 'private',
+      isTemplate: false,
+      isFeatured: false,
     });
 
     return NextResponse.json({ success: true, pluginId });

@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Send message to external API using the documented format
+    // Send message to external API using the documented format with userId
     console.log(`Sending request to external API: ${API_BASE_URL}/create/chat`);
     const response = await fetch(`${API_BASE_URL}/create/chat`, {
       method: 'POST',
@@ -50,8 +50,9 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        userId: session.user.id, // Include userId for user-specific plugin access
+        pluginName,
         message,
-        name: pluginName, // Use name as expected by the backend instead of pluginName
         previousContext: body.previousContext
       }),
     });
@@ -74,13 +75,24 @@ export async function POST(request: NextRequest) {
     // Save chat message to database
     const messageId = await DatabaseService.saveChatMessage({
       userId: session.user.id,
-      pluginName,
+      conversationId: currentConversationId,
       message,
       response: apiData.response,
+      role: 'assistant',
       messageType,
+      intent: apiData.operations && apiData.operations.length > 0 ? 'modify' : 'explain',
       operations: apiData.operations,
       compilationResult: apiData.compilationResult,
-      conversationId: currentConversationId,
+      aiModel: 'gpt-4',
+      tokensUsed: {
+        input: 0, // TODO: Calculate actual token usage
+        output: 0,
+        total: 0
+      },
+      responseTime: 0, // TODO: Calculate actual response time
+      temperature: 0.7,
+      status: 'completed',
+      isEdited: false,
     });
 
     // Update plugin status if compilation occurred

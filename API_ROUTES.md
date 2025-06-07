@@ -62,7 +62,7 @@ Content-Type: application/json
 **Example Request:**
 
 ```bash
-curl -X POST http://localhost:3000/create \
+curl -X POST http://37.114.41.124:3000/create \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "Create a plugin that gives players a diamond sword when they type /sword",
@@ -118,7 +118,7 @@ Content-Type: application/json
 **Example Request:**
 
 ```bash
-curl -X POST http://localhost:3000/create/chat \
+curl -X POST http://37.114.41.124:3000/create/chat \
   -H "Content-Type: application/json" \
   -d '{
     "message": "Can you add enchantments to the sword?",
@@ -168,7 +168,7 @@ None currently supported.
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/create/plugins
+curl http://37.114.41.124:3000/create/plugins
 ```
 
 **Response Format:**
@@ -200,7 +200,7 @@ GET /create/download/:pluginName
 **Example Request:**
 
 ```bash
-curl -O http://localhost:3000/create/download/DiamondSwordGiver
+curl -O http://37.114.41.124:3000/create/download/DiamondSwordGiver
 ```
 
 **Response:**
@@ -240,7 +240,7 @@ GET /health
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/health
+curl http://37.114.41.124:3000/health
 ```
 
 **Response Format:**
@@ -274,7 +274,7 @@ GET /health/detailed
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/health/detailed
+curl http://37.114.41.124:3000/health/detailed
 ```
 
 **Response Format:**
@@ -350,7 +350,7 @@ GET /health/metrics
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/health/metrics
+curl http://37.114.41.124:3000/health/metrics
 ```
 
 **Response Format:**
@@ -390,7 +390,7 @@ GET /health/circuit-breakers
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/health/circuit-breakers
+curl http://37.114.41.124:3000/health/circuit-breakers
 ```
 
 **Response Format:**
@@ -424,7 +424,7 @@ GET /health/trends
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/health/trends
+curl http://37.114.41.124:3000/health/trends
 ```
 
 **Response Format:**
@@ -482,7 +482,7 @@ GET /health/trends/:serviceName
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/health/trends/gemini
+curl http://37.114.41.124:3000/health/trends/gemini
 ```
 
 **Response Format:**
@@ -517,7 +517,7 @@ GET /health/ready
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/health/ready
+curl http://37.114.41.124:3000/health/ready
 ```
 
 **Response Format:**
@@ -544,7 +544,7 @@ GET /health/live
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/health/live
+curl http://37.114.41.124:3000/health/live
 ```
 
 **Response Format:**
@@ -570,7 +570,7 @@ GET /health/ping
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/health/ping
+curl http://37.114.41.124:3000/health/ping
 ```
 
 **Response Format:**
@@ -595,7 +595,7 @@ GET /health/system
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/health/system
+curl http://37.114.41.124:3000/health/system
 ```
 
 **Response Format:**
@@ -637,7 +637,7 @@ GET /api/optimization-stats
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/api/optimization-stats
+curl http://37.114.41.124:3000/api/optimization-stats
 ```
 
 **Response Format:**
@@ -666,7 +666,7 @@ GET /api/clear-cache
 **Example Request:**
 
 ```bash
-curl http://localhost:3000/api/clear-cache
+curl http://37.114.41.124:3000/api/clear-cache
 ```
 
 **Response Format:**
@@ -764,23 +764,23 @@ X-RateLimit-Reset: 1717668600
 
 ```bash
 # Health check
-curl http://localhost:3000/health
+curl http://37.114.41.124:3000/health
 
 # Create a plugin
-curl -X POST http://localhost:3000/create \
+curl -X POST http://37.114.41.124:3000/create \
   -H "Content-Type: application/json" \
   -d '{"prompt": "A simple greeting plugin", "name": "GreeterPlugin"}'
 
 # List plugins
-curl http://localhost:3000/create/plugins
+curl http://37.114.41.124:3000/create/plugins
 
 # Chat about a plugin
-curl -X POST http://localhost:3000/create/chat \
+curl -X POST http://37.114.41.124:3000/create/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "How do I modify the greeting message?", "name": "GreeterPlugin"}'
 
 # Download plugin
-curl -O http://localhost:3000/create/download/GreeterPlugin
+curl -O http://37.114.41.124:3000/create/download/GreeterPlugin
 ```
 
 ### Using HTTPie
@@ -853,7 +853,7 @@ const usePluginAPI = () => {
 import requests
 
 class PegasusNestAPI:
-    def __init__(self, base_url="http://localhost:3000"):
+    def __init__(self, base_url="http://37.114.41.124:3000"):
         self.base_url = base_url
 
     def create_plugin(self, prompt, name=None):

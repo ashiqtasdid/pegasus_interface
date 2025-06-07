@@ -12,49 +12,49 @@ import {
   Sparkles,
   Plus,
   ChevronLeft,
-  Settings,
   FileCode,
   Zap,
   History,
   X
 } from 'lucide-react';
 import { usePluginChat, useUserPlugins } from '@/hooks/useApi';
+import { useUserContext } from '@/hooks/useUserContext';
 import { downloadPluginFile } from '@/lib/api';
-
-interface ChatMessage {
-  _id: string;
-  userId: string;
-  pluginName: string;
-  message: string;
-  response: string;
-  messageType: 'info' | 'modification';
-  operations?: FileOperation[];
-  compilationResult?: CompilationResult;
-  timestamp: Date;
-  conversationId: string;
-}
 
 interface FileOperation {
   type: 'create' | 'modify' | 'delete';
   file: string;
-  content: string;
+  content?: string;
 }
 
-interface CompilationResult {
-  success: boolean;
-  output: string;
-  errors: string[];
+interface ChatMessage {
+  _id?: string;
+  message?: string;
+  timestamp?: string | Date;
+  response?: string;
+  operations?: FileOperation[];
+  compilationResult?: {
+    success: boolean;
+    output?: string;
+    errors?: string[];
+  };
+  compilationResults?: {
+    success: boolean;
+    output?: string;
+    errors?: string[];
+  };
+  messageType?: string;
 }
 
-interface ChatConversation {
-  _id: string;
-  userId: string;
-  pluginName: string;
-  title: string;
-  createdAt: Date;
-  updatedAt: Date;
-  messageCount: number;
-}
+// interface ChatConversation {
+//   _id: string;
+//   userId: string;
+//   pluginName: string;
+//   title: string;
+//   createdAt: Date;
+//   updatedAt: Date;
+//   messageCount: number;
+// }
 
 interface AdvancedChatProps {
   selectedPlugin?: string;
@@ -65,10 +65,10 @@ interface AdvancedChatProps {
 
 export const AdvancedChat: React.FC<AdvancedChatProps> = ({
   selectedPlugin,
-  onPluginChange,
   compact = false,
   className = ''
 }) => {
+  const { userContext } = useUserContext();
   const { 
     sendMessage, 
     loadConversations, 
@@ -77,11 +77,11 @@ export const AdvancedChat: React.FC<AdvancedChatProps> = ({
     loading, 
     error, 
     conversations, 
-    messages, 
-    currentConversation 
+    messages
+    // currentConversation 
   } = usePluginChat();
 
-  const { loadUserPlugins, plugins: userPlugins } = useUserPlugins();
+  const { loadPlugins } = useUserPlugins();
 
   const [currentMessage, setCurrentMessage] = useState('');
   const [showSidebar, setShowSidebar] = useState(!compact);
@@ -98,11 +98,11 @@ export const AdvancedChat: React.FC<AdvancedChatProps> = ({
 
   // Load user plugins and conversations on mount
   useEffect(() => {
-    loadUserPlugins();
+    loadPlugins();
     if (selectedPlugin) {
       loadConversations(selectedPlugin);
     }
-  }, [selectedPlugin, loadUserPlugins, loadConversations]);
+  }, [selectedPlugin, loadPlugins, loadConversations]);
 
   const handleSendMessage = async () => {
     if (!currentMessage.trim() || !selectedPlugin) return;
@@ -115,7 +115,7 @@ export const AdvancedChat: React.FC<AdvancedChatProps> = ({
         message: messageToSend,
         pluginName: selectedPlugin,
         conversationId: selectedConversation || undefined,
-      });
+      }) ;
 
       if (response.success && response.conversationId) {
         if (!selectedConversation) {
@@ -182,118 +182,138 @@ export const AdvancedChat: React.FC<AdvancedChatProps> = ({
     }
   };
 
-  const renderMessage = (message: ChatMessage, index: number) => {
-    const isUser = index % 2 === 0; // Assuming messages alternate user/assistant
-    const content = isUser ? message.message : message.response;
-    
+  const renderMessage = (message: ChatMessage, index: number): React.ReactElement => {
     return (
-      <div key={`${message._id}-${index}`} className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-6`}>
-        <div className={`flex space-x-3 max-w-[80%] ${isUser ? 'flex-row-reverse space-x-reverse' : ''}`}>
-          <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-            isUser 
-              ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white' 
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300'
-          }`}>
-            {isUser ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
-          </div>
-          
-          <div className={`flex-1 ${isUser ? 'text-right' : ''}`}>
-            <div className={`inline-block p-4 rounded-2xl shadow-sm ${
-              isUser
-                ? 'bg-gradient-to-br from-blue-500 to-purple-600 text-white'
-                : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700'
-            }`}>
-              <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed">{content}</pre>
-            </div>
-            
-            {/* Show operations and compilation results for assistant messages */}
-            {!isUser && message.operations && message.operations.length > 0 && (
-              <div className="mt-3 space-y-2">
-                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center">
-                  <FileCode className="w-3 h-3 mr-1" />
-                  File Operations
-                </div>
-                {message.operations.map((op, opIndex) => (
-                  <div key={opIndex} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
-                        {op.type.toUpperCase()}: {op.file}
-                      </span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        op.type === 'create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                        op.type === 'modify' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}>
-                        {op.type}
-                      </span>
-                    </div>
-                    {op.content && (
-                      <pre className="text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-900 p-2 rounded overflow-x-auto">
-                        {op.content.length > 200 ? op.content.substring(0, 200) + '...' : op.content}
-                      </pre>
-                    )}
-                  </div>
-                ))}
+      <div key={`${message._id as string || index}-${index}`} className="space-y-6">
+        {/* User Message */}
+        {(message.message && String(message.message).trim().length > 0) ? (
+          <div className="flex justify-end mb-6">
+            <div className="flex space-x-3 max-w-[80%] flex-row-reverse space-x-reverse">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                <User className="w-5 h-5" />
               </div>
-            )}
-
-            {/* Show compilation results */}
-            {!isUser && message.compilationResult && (
-              <div className="mt-3">
-                <div className={`p-3 rounded-lg border ${
-                  message.compilationResult.success
-                    ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
-                    : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
-                }`}>
-                  <div className="flex items-center mb-2">
-                    <Zap className={`w-4 h-4 mr-2 ${
-                      message.compilationResult.success ? 'text-green-600' : 'text-red-600'
-                    }`} />
-                    <span className={`text-sm font-medium ${
-                      message.compilationResult.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
-                    }`}>
-                      Compilation {message.compilationResult.success ? 'Successful' : 'Failed'}
-                    </span>
+              
+              <div className="flex-1 text-right">
+                <div className="inline-block p-4 rounded-2xl shadow-sm bg-gradient-to-br from-blue-500 to-purple-600 text-white">
+                  <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed">{String(message.message || '')}</pre>
+                </div>
+                
+                <div className="flex items-center justify-end mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center space-x-2">
+                    <Clock className="w-3 h-3" />
+                    <span>{formatTimestamp(message.timestamp as string | Date || new Date())}</span>
                   </div>
-                  {message.compilationResult.output && (
-                    <pre className="text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 p-2 rounded overflow-x-auto">
-                      {message.compilationResult.output}
-                    </pre>
-                  )}
-                  {message.compilationResult.errors && message.compilationResult.errors.length > 0 && (
-                    <div className="mt-2">
-                      <div className="text-xs font-medium text-red-600 mb-1">Errors:</div>
-                      {message.compilationResult.errors.map((error, errorIndex) => (
-                        <div key={errorIndex} className="text-xs text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 p-2 rounded mb-1">
-                          {error}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Assistant Response */}
+        {(message.response && String(message.response).trim().length > 0) ? (
+          <div className="flex justify-start mb-6">
+            <div className="flex space-x-3 max-w-[80%]">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                <Bot className="w-5 h-5" />
+              </div>
+              
+              <div className="flex-1">
+                <div className="inline-block p-4 rounded-2xl shadow-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700">
+                  <pre className="whitespace-pre-wrap text-sm font-sans leading-relaxed">{String(message.response || '')}</pre>
+                </div>
+                
+                {/* Show operations and compilation results for assistant messages */}
+                <>
+                  {Array.isArray(message.operations) && message.operations.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center">
+                        <FileCode className="w-3 h-3 mr-1" />
+                        File Operations
+                      </div>
+                      {message.operations.map((op: FileOperation, opIndex: number) => (
+                        <div key={opIndex} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                              {String(op.type || '').toUpperCase()}: {String(op.file || '')}
+                            </span>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              op.type === 'create' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                              op.type === 'modify' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                              'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}>
+                              {String(op.type || '')}
+                            </span>
+                          </div>
+                          {op.content && (
+                            <pre className="text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-900 p-2 rounded overflow-x-auto">
+                              {String(op.content || '').length > 200 ? String(op.content || '').substring(0, 200) + '...' : String(op.content || '')}
+                            </pre>
+                          )}
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
-              </div>
-            )}
-            
-            <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
-              <div className="flex items-center space-x-2">
-                <Clock className="w-3 h-3" />
-                <span>{formatTimestamp(message.timestamp)}</span>
-                {message.messageType && (
-                  <>
-                    <span>•</span>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      message.messageType === 'modification' 
-                        ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
-                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                </>
+
+                {/* Show compilation results */}
+                {message.compilationResult && typeof message.compilationResult === 'object' && (
+                  <div className="mt-3">
+                    <div className={`p-3 rounded-lg border ${
+                      message.compilationResult.success
+                        ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800'
+                        : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
                     }`}>
-                      {message.messageType}
-                    </span>
-                  </>
+                      <div className="flex items-center mb-2">
+                        <Zap className={`w-4 h-4 mr-2 ${
+                          message.compilationResult.success ? 'text-green-600' : 'text-red-600'
+                        }`} />
+                        <span className={`text-sm font-medium ${
+                          message.compilationResult.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
+                        }`}>
+                          Compilation {message.compilationResult.success ? 'Successful' : 'Failed'}
+                        </span>
+                      </div>
+                      {message.compilationResult.output && (
+                        <pre className="text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 p-2 rounded overflow-x-auto">
+                          {String(message.compilationResult.output || '')}
+                        </pre>
+                      )}
+                      {Array.isArray(message.compilationResult.errors) && message.compilationResult.errors.length > 0 && (
+                        <div className="mt-2">
+                          <div className="text-xs font-medium text-red-600 mb-1">Errors:</div>
+                          {message.compilationResult.errors.map((error: string, errorIndex: number) => (
+                            <div key={errorIndex} className="text-xs text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 p-2 rounded mb-1">
+                              {String(error || '')}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
+                
+                <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center space-x-2">
+                    <Clock className="w-3 h-3" />
+                    <span>{formatTimestamp(message.timestamp as string | Date || new Date())}</span>
+                    {(message.messageType && String(message.messageType).trim().length > 0) ? (
+                      <>
+                        <span>•</span>
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          message.messageType === 'modification' 
+                            ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
+                            : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                        }`}>
+                          {String(message.messageType || '')}
+                        </span>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : null}
       </div>
     );
   };
@@ -311,6 +331,27 @@ export const AdvancedChat: React.FC<AdvancedChatProps> = ({
             </h3>
             <p className="text-gray-600 dark:text-gray-400 max-w-md">
               Choose one of your generated plugins to start chatting about it or requesting modifications.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Authentication check
+  if (!userContext?.isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center h-96 bg-gray-50 dark:bg-gray-900 rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center mx-auto">
+            <AlertCircle className="w-8 h-8 text-red-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Authentication Required
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 max-w-md">
+              Please sign in to access your plugins and chat functionality.
             </p>
           </div>
         </div>
@@ -363,22 +404,22 @@ export const AdvancedChat: React.FC<AdvancedChatProps> = ({
             ) : (
               conversations.map((conversation) => (
                 <div
-                  key={conversation._id}
+                  key={conversation._id as string}
                   className={`group p-3 rounded-lg cursor-pointer transition-colors ${
                     selectedConversation === conversation._id
                       ? 'bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700'
                       : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
-                  onClick={() => handleSelectConversation(conversation._id)}
+                  onClick={() => handleSelectConversation(conversation._id as string)}
                 >
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {conversation.title}
+                      {(conversation.title as string) || 'Untitled Conversation'}
                     </h3>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDeleteConversation(conversation._id);
+                        handleDeleteConversation(conversation._id as string);
                       }}
                       className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 rounded transition-all"
                     >
@@ -387,10 +428,10 @@ export const AdvancedChat: React.FC<AdvancedChatProps> = ({
                   </div>
                   <div className="flex items-center justify-between mt-2">
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {conversation.messageCount} messages
+                      {(conversation.messageCount as number) || 0} messages
                     </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatTimestamp(conversation.updatedAt)}
+                      {formatTimestamp((conversation.updatedAt as string | Date) || new Date())}
                     </span>
                   </div>
                 </div>
@@ -434,7 +475,7 @@ export const AdvancedChat: React.FC<AdvancedChatProps> = ({
                     {selectedPlugin} Chat
                   </h1>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Ask questions or request modifications
+                    Ask questions or request modifications • User: {userContext?.displayName || userContext?.email}
                   </p>
                 </div>
               </div>
@@ -463,13 +504,13 @@ export const AdvancedChat: React.FC<AdvancedChatProps> = ({
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="font-medium text-blue-600 mb-2">💡 Information</div>
                   <p className="text-gray-600 dark:text-gray-400">
-                    "What commands does this plugin have?"
+                    &quot;What commands does this plugin have?&quot;
                   </p>
                 </div>
                 <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="font-medium text-purple-600 mb-2">🔧 Modification</div>
                   <p className="text-gray-600 dark:text-gray-400">
-                    "Add a new command called /heal"
+                    &quot;Add a new command called /heal&quot;
                   </p>
                 </div>
               </div>

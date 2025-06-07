@@ -61,7 +61,7 @@ const MetricCard: React.FC<{
   icon: React.ElementType;
   status?: 'up' | 'down' | 'ok' | 'degraded' | 'unknown';
   trend?: 'up' | 'down' | 'stable';
-}> = ({ title, value, subvalue, icon: Icon, status, trend }) => {
+}> = ({ title, value, subvalue, icon: Icon, status }) => {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-3">
@@ -86,7 +86,7 @@ const ServiceCard: React.FC<{
   name: string;
   status: 'up' | 'down';
   responseTime?: number;
-  details?: any;
+  details?: Record<string, unknown>;
   icon: React.ElementType;
 }> = ({ name, status, responseTime, details, icon: Icon }) => {
   return (
@@ -136,12 +136,12 @@ const formatUptime = (seconds: number): string => {
   }
 };
 
-const formatBytes = (bytes: number): string => {
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  if (bytes === 0) return '0 B';
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-};
+// const formatBytes = (bytes: number): string => {
+//   const sizes = ['B', 'KB', 'MB', 'GB'];
+//   if (bytes === 0) return '0 B';
+//   const i = Math.floor(Math.log(bytes) / Math.log(1024));
+//   return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+// };
 
 export default function HealthPage() {
   const { checkHealth, loading, error, data } = useHealth();

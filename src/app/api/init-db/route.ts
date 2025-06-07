@@ -1,48 +1,82 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/database';
+import { initializeDatabase, databaseHealthCheck } from '@/lib/database-indexes';
 
-// This route initializes the database connection and ensures collections exist
-export async function GET(request: NextRequest) {
+// This route initializes the comprehensive database structure with indexes and validation
+export async function GET() {
   try {
+    console.log('🚀 Starting database initialization...');
+    
     // Test database connection
-    const { db } = await connectToDatabase();
+    await connectToDatabase();
+    console.log('✅ Connected to MongoDB successfully');
     
-    // Ensure collections exist (MongoDB creates them automatically when first document is inserted)
-    // But we can create indexes for better performance
+    // Check current database status
+    const healthCheck = await databaseHealthCheck();
+    console.log('📊 Database health check:', healthCheck);
     
-    // Create indexes for user plugins collection
-    const userPluginsCollection = db.collection('pegasus_user_plugins');
-    await userPluginsCollection.createIndex({ userId: 1 });
-    await userPluginsCollection.createIndex({ pluginName: 1 });
-    await userPluginsCollection.createIndex({ createdAt: -1 });
+    // Initialize database (create indexes and validation)
+    await initializeDatabase();
     
-    // Create indexes for chat messages collection
-    const chatMessagesCollection = db.collection('pegasus_chat_messages');
-    await chatMessagesCollection.createIndex({ userId: 1 });
-    await chatMessagesCollection.createIndex({ conversationId: 1 });
-    await chatMessagesCollection.createIndex({ timestamp: -1 });
-    
-    // Create indexes for chat conversations collection
-    const chatConversationsCollection = db.collection('pegasus_chat_conversations');
-    await chatConversationsCollection.createIndex({ userId: 1 });
-    await chatConversationsCollection.createIndex({ pluginName: 1 });
-    await chatConversationsCollection.createIndex({ createdAt: -1 });
-    
-    console.log('Database initialization completed successfully');
+    // Final health check
+    const finalCheck = await databaseHealthCheck();
     
     return NextResponse.json({
       success: true,
-      message: 'Database initialized successfully',
-      collections: [
-        'pegasus_user_plugins',
-        'pegasus_chat_messages', 
-        'pegasus_chat_conversations'
+      message: 'Database initialized successfully with comprehensive schema',
+      database: 'better-auth',
+      initialHealth: healthCheck,
+      finalHealth: finalCheck,
+      features: [
+        'User profiles with preferences and analytics',
+        'Hierarchical plugin management with versioning',
+        'Enhanced chat system with AI metadata',
+        'Comprehensive user activity tracking',
+        'Plugin analytics and performance metrics',
+        'Review and rating system',
+        'Plugin collections and curation',
+        'Optimized indexes for fast queries',
+        'Schema validation for data integrity'
       ],
-      timestamp: new Date().toISOString()
+      collections: {
+        'pegasus_user_profiles': 'User preferences, subscription, and statistics',
+        'pegasus_user_plugins': 'Plugin metadata, files, versions, and analytics',
+        'pegasus_chat_conversations': 'Chat conversation management with AI context',
+        'pegasus_chat_messages': 'Individual messages with rich metadata',
+        'pegasus_user_activities': 'User activity tracking and analytics',
+        'pegasus_plugin_analytics': 'Plugin usage and performance metrics',
+        'pegasus_plugin_reviews': 'User reviews and ratings',
+        'pegasus_plugin_collections': 'User-curated plugin collections'
+      },
+      indexes: {
+        total: 50,
+        categories: [
+          'Primary key indexes',
+          'Compound query indexes', 
+          'Text search indexes',
+          'Analytics optimization indexes',
+          'Time-based TTL indexes'
+        ]
+      },
+      validation: {
+        enabled: true,
+        collections: [
+          'pegasus_user_plugins',
+          'pegasus_chat_conversations', 
+          'pegasus_chat_messages'
+        ],
+        features: [
+          'Required field validation',
+          'Data type enforcement',
+          'Enum value validation',
+          'String pattern matching',
+          'Numeric range validation'
+        ]
+      }
     });
     
   } catch (error) {
-    console.error('Database initialization failed:', error);
+    console.error('❌ Database initialization failed:', error);
     
     return NextResponse.json({
       success: false,
@@ -53,7 +87,25 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  // Same as GET - allows both methods for flexibility
-  return GET(request);
+// Health check endpoint
+export async function POST() {
+  try {
+    const healthCheck = await databaseHealthCheck();
+    
+    return NextResponse.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      ...healthCheck
+    });
+    
+  } catch (error) {
+    console.error('❌ Database health check failed:', error);
+    
+    return NextResponse.json({
+      success: false,
+      error: 'Health check failed',
+      details: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
+  }
 }

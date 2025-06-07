@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { apiClient, pollCompilationStatus } from '@/lib/api';
+import { useUserContext } from '@/hooks/useUserContext';
 import {
   GeneratePluginRequest,
   ChatRequest,
@@ -11,8 +12,14 @@ export const usePluginGeneration = () => {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<string | null>(null);
   const [compilationStatus, setCompilationStatus] = useState<string>('idle');
+  const { userContext } = useUserContext();
 
   const generatePlugin = useCallback(async (request: GeneratePluginRequest) => {
+    if (!userContext?.isAuthenticated) {
+      setError('User not authenticated');
+      throw new Error('User not authenticated');
+    }
+
     setLoading(true);
     setError(null);
     setCompilationStatus('pending');
@@ -38,7 +45,7 @@ export const usePluginGeneration = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userContext]);
 
   const reset = useCallback(() => {
     setData(null);
@@ -47,17 +54,31 @@ export const usePluginGeneration = () => {
     setCompilationStatus('idle');
   }, []);
 
-  return { generatePlugin, loading, error, data, compilationStatus, reset };
+  return { 
+    generatePlugin, 
+    loading, 
+    error, 
+    data, 
+    compilationStatus, 
+    reset,
+    userContext 
+  };
 };
 
 export const usePluginChat = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Array<Record<string, unknown>>>([]);
   const [currentConversation, setCurrentConversation] = useState<string | null>(null);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Array<Record<string, unknown>>>([]);
+  const { userContext } = useUserContext();
 
   const sendMessage = useCallback(async (request: ChatRequest & { conversationId?: string }) => {
+    if (!userContext?.isAuthenticated) {
+      setError('User not authenticated');
+      throw new Error('User not authenticated');
+    }
+
     setLoading(true);
     setError(null);
 
@@ -81,16 +102,21 @@ export const usePluginChat = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userContext]);
 
   const loadConversations = useCallback(async (pluginName?: string) => {
+    if (!userContext?.isAuthenticated) {
+      setError('User not authenticated');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const response = await apiClient.getChatHistory(pluginName);
       if (response.success) {
-        setConversations(response.conversations || []);
+        setConversations(Array.isArray(response.conversations) ? response.conversations : []);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load conversations';
@@ -98,16 +124,21 @@ export const usePluginChat = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userContext]);
 
   const loadMessages = useCallback(async (conversationId: string) => {
+    if (!userContext?.isAuthenticated) {
+      setError('User not authenticated');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const response = await apiClient.getChatHistory(undefined, conversationId);
       if (response.success) {
-        setMessages(response.messages || []);
+        setMessages(Array.isArray(response.messages) ? response.messages : []);
         setCurrentConversation(conversationId);
       }
     } catch (err) {
@@ -116,9 +147,14 @@ export const usePluginChat = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userContext]);
 
   const deleteConversation = useCallback(async (conversationId: string) => {
+    if (!userContext?.isAuthenticated) {
+      setError('User not authenticated');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -137,7 +173,7 @@ export const usePluginChat = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentConversation]);
+  }, [currentConversation, userContext]);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
@@ -155,39 +191,50 @@ export const usePluginChat = () => {
     error, 
     conversations, 
     messages, 
-    currentConversation 
+    currentConversation,
+    userContext 
   };
 };
 
 export const useUserPlugins = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [plugins, setPlugins] = useState<any[]>([]);
+  const [plugins, setPlugins] = useState<string[]>([]);
+  const { userContext } = useUserContext();
 
-  const loadUserPlugins = useCallback(async () => {
+  const loadPlugins = useCallback(async () => {
+    if (!userContext?.isAuthenticated) {
+      setError('User not authenticated');
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const userPlugins = await apiClient.getUserPlugins();
-      setPlugins(userPlugins);
-      return userPlugins;
+      const pluginList = await apiClient.getPlugins();
+      setPlugins(Array.isArray(pluginList) ? pluginList : []);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load user plugins';
+      const message = err instanceof Error ? err.message : 'Failed to load plugins';
       setError(message);
-      throw err;
+      setPlugins([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userContext]);
 
-  const savePlugin = useCallback(async (pluginName: string, pluginData?: any, status?: string) => {
+  const savePlugin = useCallback(async (pluginName: string, pluginData?: Record<string, unknown>, status?: string) => {
+    if (!userContext?.isAuthenticated) {
+      throw new Error('User not authenticated');
+    }
+
     setLoading(true);
     setError(null);
 
     try {
       const pluginId = await apiClient.saveUserPlugin(pluginName, pluginData, status);
-      await loadUserPlugins(); // Refresh the list
+      // Reload plugins after saving
+      await loadPlugins();
       return pluginId;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save plugin';
@@ -196,17 +243,30 @@ export const useUserPlugins = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadUserPlugins]);
+  }, [userContext, loadPlugins]);
 
-  return { loadUserPlugins, savePlugin, loading, error, plugins };
+  return { 
+    plugins, 
+    loading, 
+    error, 
+    loadPlugins, 
+    savePlugin,
+    userContext 
+  };
 };
 
 export const usePluginList = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<string[]>([]);
+  const { userContext } = useUserContext();
 
   const fetchPlugins = useCallback(async () => {
+    if (!userContext?.isAuthenticated) {
+      setError('User not authenticated');
+      throw new Error('User not authenticated');
+    }
+
     setLoading(true);
     setError(null);
 
@@ -221,9 +281,9 @@ export const usePluginList = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userContext]);
 
-  return { fetchPlugins, loading, error, data };
+  return { fetchPlugins, loading, error, data, userContext };
 };
 
 export const useHealth = () => {

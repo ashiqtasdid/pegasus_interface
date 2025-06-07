@@ -32,7 +32,7 @@ The Pegasus Nest API is a RESTful service that allows developers to generate, mo
 
 ```
 Production: https://your-production-domain.com
-Development: http://localhost:3000
+Development: http://37.114.41.124:3000
 ```
 
 ### Authentication
@@ -630,7 +630,7 @@ Use environment variables for API base URLs:
 
 ```typescript
 // .env.local
-NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
+NEXT_PUBLIC_API_BASE_URL=http://37.114.41.124:3000
 ```
 
 ### 7. TypeScript Types

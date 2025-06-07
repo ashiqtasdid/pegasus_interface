@@ -76,7 +76,7 @@ export const UserProfile: React.FC = () => {
     try {
       await signOut();
       router.push('/');
-    } catch (err) {
+    } catch {
       setError('Failed to sign out');
     }
   };

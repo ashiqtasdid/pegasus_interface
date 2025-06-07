@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
 
-export default function withAuth(Component: React.ComponentType<any>) {
-  return function ProtectedRoute(props: any) {
+export default function withAuth<P extends Record<string, unknown>>(Component: React.ComponentType<P>) {
+  const ProtectedRoute: React.FC<P> = (props) => {
     const { data: session, isPending } = useSession();
     const router = useRouter();
 
@@ -37,4 +37,6 @@ export default function withAuth(Component: React.ComponentType<any>) {
     // User is authenticated, render the protected component
     return <Component {...props} />;
   };
+  
+  return ProtectedRoute;
 }

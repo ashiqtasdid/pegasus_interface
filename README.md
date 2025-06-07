@@ -112,7 +112,7 @@ The application integrates with the Pegasus Nest API (hosted at `37.114.41.124:3
    API_BASE_URL=http://37.114.41.124:3000
    ```
 4. Start development server: `npm run dev`
-5. Open http://localhost:3000
+5. Open http://37.114.41.124:3000
 
 ### Available Scripts
 - `npm run dev` - Start development server with Turbopack
@@ -136,7 +136,7 @@ The application integrates with the Pegasus Nest API (hosted at `37.114.41.124:3
 - All pages are functional and error-free
 
 🧪 **READY FOR TESTING:**
-- The application is running at http://localhost:3000
+- The application is running at http://37.114.41.124:3000
 - All core features are implemented
 - API integration is ready for live testing
 - Test page available for API connectivity verification

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://37.114.41.124:3000';
 
@@ -7,9 +8,16 @@ export async function GET(
   { params }: { params: Promise<{ pluginName: string }> }
 ) {
   try {
+    // Get user session for user-specific plugin download
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { pluginName } = await params;
+    const userId = session.user.id;
     
-    const response = await fetch(`${API_BASE_URL}/create/download/${pluginName}`);
+    const response = await fetch(`${API_BASE_URL}/create/download/${pluginName}?userId=${encodeURIComponent(userId)}`);
     
     if (!response.ok) {
       return NextResponse.json(

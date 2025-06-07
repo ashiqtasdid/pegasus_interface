@@ -20,7 +20,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, messages });
     } else {
       // Get all conversations for user (optionally filtered by plugin)
-      const conversations = await DatabaseService.getConversations(session.user.id, pluginName || undefined);
+      const conversations = await DatabaseService.getConversations(session.user.id, { 
+        pluginId: pluginName || undefined 
+      });
       return NextResponse.json({ success: true, conversations });
     }
 

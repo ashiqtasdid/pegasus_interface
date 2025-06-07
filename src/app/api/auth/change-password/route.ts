@@ -47,11 +47,11 @@ export async function POST(request: NextRequest) {
       { message: 'Password updated successfully' },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error changing password:', error);
     
     // Return error message from Better Auth if available
-    if (error.message) {
+    if (error instanceof Error && error.message) {
       return NextResponse.json(
         { error: error.message },
         { status: 400 }

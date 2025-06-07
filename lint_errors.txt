@@ -1,0 +1,5 @@
+
+> pegasus_interface@0.1.0 lint /home/ashiqtasdid/codespace/pegasus_interface
+> next lint
+
+ ELIFECYCLE  Command failed with exit code 1.

@@ -16,10 +16,8 @@ export default function ServiceStatus() {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-        console.log('API URL:', apiUrl); // Debug log
-        
-        const response = await fetch(`${apiUrl}/health`);
+        // Use the Next.js API route instead of direct external API call
+        const response = await fetch('/api/health');
         const data = await response.json();
         
         setHealth({
@@ -28,7 +26,7 @@ export default function ServiceStatus() {
           timestamp: data.timestamp
         });
       } catch (error) {
-        console.error('Health check failed:', error); // Debug log
+        console.error('Health check failed:', error);
         setHealth({
           status: 'down',
           message: 'Unable to connect to API services'

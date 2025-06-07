@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { createCorsResponse, createCorsErrorResponse, handleOptions } from '../../../../utils/cors';
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://37.114.41.124:3000';
 
@@ -58,21 +58,16 @@ export async function GET() {
       environment: process.env.NODE_ENV || 'development'
     };
 
-    return NextResponse.json(detailedHealth);
+    return createCorsResponse(detailedHealth);
   } catch (error) {
     console.error('Detailed health check failed:', error);
-    return NextResponse.json(
-      {
-        status: 'down',
-        timestamp: new Date().toISOString(),
-        error: error instanceof Error ? error.message : 'Unknown error',
-        services: [],
-        uptime: Math.floor(process.uptime()),
-        memory: process.memoryUsage(),
-        version: process.env.npm_package_version || '1.0.0',
-        environment: process.env.NODE_ENV || 'development'
-      },
-      { status: 500 }
+    return createCorsErrorResponse(
+      error instanceof Error ? error.message : 'Unknown error',
+      500
     );
   }
+}
+
+export async function OPTIONS() {
+  return handleOptions();
 }

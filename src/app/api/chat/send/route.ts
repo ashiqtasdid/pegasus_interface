@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { DatabaseService } from '@/lib/database';
+import { createCorsResponse, createCorsErrorResponse, handleOptions } from '../../../../utils/cors';
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://37.114.41.124:3000';
 
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
     // Get user session
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      return createCorsErrorResponse('Unauthorized', 401);
     }
 
     const body = await request.json();
@@ -19,10 +20,7 @@ export async function POST(request: NextRequest) {
 
     if (!message || !pluginName) {
       console.log('Missing required fields:', { message: !!message, pluginName: !!pluginName });
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Message and plugin name are required' 
-      }, { status: 400 });
+      return createCorsErrorResponse('Message and plugin name are required', 400);
     }
 
     // Create new conversation if not provided
@@ -61,10 +59,7 @@ export async function POST(request: NextRequest) {
       console.error(`External API error: Status ${response.status}`);
       const errorText = await response.text().catch(() => 'Could not read error response');
       console.error(`Error details: ${errorText}`);
-      return NextResponse.json({
-        success: false,
-        error: `External API responded with status: ${response.status}`
-      }, { status: response.status });
+      return createCorsErrorResponse(`External API responded with status: ${response.status}`, response.status);
     }
 
     const apiData = await response.json();
@@ -101,7 +96,7 @@ export async function POST(request: NextRequest) {
       await DatabaseService.updatePluginStatus(session.user.id, pluginName, status);
     }
 
-    return NextResponse.json({
+    return createCorsResponse({
       ...apiData,
       messageId,
       conversationId: currentConversationId,
@@ -110,9 +105,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Failed to chat with plugin:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return createCorsErrorResponse(error instanceof Error ? error.message : 'Unknown error');
   }
+}
+
+export async function OPTIONS() {
+  return handleOptions();
 }

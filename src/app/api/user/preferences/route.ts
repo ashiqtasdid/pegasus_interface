@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
+import { createCorsResponse, createCorsErrorResponse, handleOptions } from '../../../../utils/cors';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return createCorsErrorResponse('Unauthorized', 401);
     }
 
     // TODO: Fetch from database
@@ -35,13 +36,10 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    return NextResponse.json(mockPreferences);
+    return createCorsResponse(mockPreferences);
   } catch (error) {
     console.error('Error fetching user preferences:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return createCorsErrorResponse('Internal server error');
   }
 }
 
@@ -52,17 +50,14 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return createCorsErrorResponse('Unauthorized', 401);
     }
 
     const preferences = await request.json();
     
     // Validate preferences structure
     if (!preferences || typeof preferences !== 'object') {
-      return NextResponse.json(
-        { error: 'Invalid preferences format' },
-        { status: 400 }
-      );
+      return createCorsErrorResponse('Invalid preferences format', 400);
     }
 
     const userId = session.user.id;
@@ -70,12 +65,13 @@ export async function PUT(request: NextRequest) {
     // TODO: Store preferences in database
     console.log(`Updating preferences for user ${userId}:`, preferences);
 
-    return NextResponse.json({ success: true });
+    return createCorsResponse({ success: true });
   } catch (error) {
     console.error('Error updating user preferences:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return createCorsErrorResponse('Internal server error');
   }
+}
+
+export async function OPTIONS() {
+  return handleOptions();
 }

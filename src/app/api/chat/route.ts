@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { createCorsResponse, createCorsErrorResponse, handleOptions } from '../../../utils/cors';
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://37.114.41.124:3000';
 
@@ -15,19 +16,17 @@ export async function POST(request: NextRequest) {
     });
     
     if (!response.ok) {
-      return NextResponse.json({
-        success: false,
-        error: `API responded with status: ${response.status}`
-      });
+      return createCorsErrorResponse(`API responded with status: ${response.status}`, response.status);
     }
     
     const data = await response.json();
-    return NextResponse.json(data);
+    return createCorsResponse(data);
   } catch (error) {
     console.error('Failed to chat with plugin:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return createCorsErrorResponse(error instanceof Error ? error.message : 'Unknown error');
   }
+}
+
+export async function OPTIONS() {
+  return handleOptions();
 }

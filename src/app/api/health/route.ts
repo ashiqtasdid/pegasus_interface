@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { createCorsResponse, createCorsErrorResponse, handleOptions } from '../../../utils/cors';
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://37.114.41.124:3000';
 
@@ -11,19 +11,17 @@ export async function GET() {
     });
     
     if (!response.ok) {
-      return NextResponse.json(
-        { error: `API responded with status: ${response.status}` },
-        { status: response.status }
-      );
+      return createCorsErrorResponse(`API responded with status: ${response.status}`, response.status);
     }
     
     const data = await response.json();
-    return NextResponse.json(data);
+    return createCorsResponse(data);
   } catch (error) {
     console.error('Health check failed:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return createCorsErrorResponse(error instanceof Error ? error.message : 'Unknown error');
   }
+}
+
+export async function OPTIONS() {
+  return handleOptions();
 }

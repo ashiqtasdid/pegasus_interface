@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { DatabaseService } from '@/lib/database';
+import { createCorsResponse, createCorsErrorResponse, handleOptions } from '../../../../../utils/cors';
 
 /**
  * Admin API - Update user status (active/inactive)
@@ -9,35 +10,35 @@ export async function PATCH(request: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: request.headers });
     if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return createCorsErrorResponse('Unauthorized', 401);
     }
 
     // Check if user is admin
     if (session.user.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+      return createCorsErrorResponse('Admin access required', 403);
     }
 
     const { userId, isActive } = await request.json();
 
     if (!userId || typeof isActive !== 'boolean') {
-      return NextResponse.json({ error: 'User ID and status are required' }, { status: 400 });
+      return createCorsErrorResponse('User ID and status are required', 400);
     }
 
     await DatabaseService.updateUserStatus(userId, isActive);
     
-    return NextResponse.json({
+    return createCorsResponse({
       success: true,
       message: 'User status updated successfully'
     });
 
   } catch (error) {
     console.error('Failed to update user status:', error);
-    return NextResponse.json(
-      { 
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
+    return createCorsErrorResponse(
+      error instanceof Error ? error.message : 'Unknown error'
     );
   }
+}
+
+export async function OPTIONS() {
+  return handleOptions();
 }

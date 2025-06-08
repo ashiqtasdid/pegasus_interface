@@ -16,7 +16,8 @@ import {
   LogOut,
   ChevronDown,
   BarChart3,
-  Shield
+  Shield,
+  Server
 } from 'lucide-react';
 import { useSession, signOut, ExtendedUser } from '@/lib/auth-client';
 import { useUserContext } from '@/hooks/useUserContext';
@@ -31,7 +32,6 @@ export const Navigation: React.FC<NavigationProps> = ({ children }) => {
   const { userContext } = useUserContext();
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const userMenuRef = React.useRef<HTMLDivElement>(null);
-
   // Dynamic navigation based on user role and authentication
   const getNavigationItems = () => {
     const baseNavigation = [
@@ -39,12 +39,11 @@ export const Navigation: React.FC<NavigationProps> = ({ children }) => {
       { name: 'Create Plugin', href: '/create', icon: Plus },
       { name: 'Chat with AI', href: '/chat', icon: MessageSquare },
       { name: 'My Plugins', href: '/plugins', icon: FolderOpen },
+      { name: 'Minecraft Servers', href: '/minecraft', icon: Server },
       { name: 'Health Status', href: '/health', icon: Heart },
-    ];
-
-    // Add admin-only navigation items
+    ];    // Add admin-only navigation items
     if (userContext?.role === 'admin') {
-      baseNavigation.splice(5, 0, {
+      baseNavigation.splice(6, 0, {
         name: 'Analytics',
         href: '/analytics',
         icon: BarChart3

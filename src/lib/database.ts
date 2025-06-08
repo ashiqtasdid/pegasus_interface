@@ -430,6 +430,85 @@ export interface PluginCollection {
   updatedAt: Date;
 }
 
+// Minecraft Server Management Interfaces
+export interface MinecraftServerConfig {
+  userId: string; // User identifier
+  serverName: string; // Server display name
+  port: number; // Server port (25565+)
+  maxPlayers?: number; // Maximum players (default: 20)
+  gameMode?: 'survival' | 'creative' | 'adventure' | 'spectator';
+  difficulty?: 'peaceful' | 'easy' | 'normal' | 'hard';
+  enableWhitelist?: boolean; // Whitelist mode
+  memoryLimit?: string; // JVM memory limit (e.g., "2G")
+  javaArgs?: string[]; // Additional JVM arguments
+  plugins?: string[]; // Plugin list
+}
+
+export interface ServerStatus {
+  _id?: string;
+  id: string; // Unique server ID (userId_serverName)
+  userId: string; // Owner user ID
+  status:
+    | 'creating'
+    | 'starting'
+    | 'running'
+    | 'stopping'
+    | 'stopped'
+    | 'error';
+  port: number; // Server port
+  playerCount: number; // Current player count
+  maxPlayers: number; // Maximum players
+  uptime: number; // Server uptime in seconds
+  lastSeen: Date; // Last status update
+  lastPlayerActivity: Date; // Last player activity timestamp
+  autoShutdown: boolean; // Auto-shutdown enabled
+  inactiveShutdownMinutes: number; // Inactivity timeout
+  containerId?: string; // Docker container ID
+  error?: string; // Error message if any
+  serverName?: string; // Display name
+  gameMode?: string; // Current game mode
+  difficulty?: string; // Current difficulty
+  pvp?: boolean; // PvP enabled
+  onlinePlayers?: string[]; // List of online players
+  
+  // Configuration
+  config: MinecraftServerConfig;
+  
+  // Analytics
+  analytics: {
+    totalPlayers: number;
+    peakPlayerCount: number;
+    totalUptime: number; // Total uptime in seconds
+    restartCount: number;
+    lastRestart: Date;
+  };
+  
+  // Timestamps
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MinecraftServerCommand {
+  _id?: string;
+  serverId: string;
+  userId: string;
+  command: string;
+  response?: string;
+  timestamp: Date;
+  status: 'pending' | 'executed' | 'failed';
+  executionTime?: number; // milliseconds
+}
+
+export interface MinecraftServerLog {
+  _id?: string;
+  serverId: string;
+  userId: string;
+  level: 'info' | 'warn' | 'error' | 'debug';
+  message: string;
+  timestamp: Date;
+  source: 'server' | 'plugin' | 'system';
+}
+
 // Enhanced Database collections with comprehensive schema support
 export const getUserProfilesCollection = async (): Promise<Collection<UserProfile>> => {
   const db = await ensureConnection();
@@ -469,6 +548,26 @@ export const getPluginReviewsCollection = async (): Promise<Collection<PluginRev
 export const getPluginCollectionsCollection = async (): Promise<Collection<PluginCollection>> => {
   const db = await ensureConnection();
   return db.collection<PluginCollection>('pegasus_plugin_collections');
+};
+
+export const getServerStatusCollection = async (): Promise<Collection<ServerStatus>> => {
+  const db = await ensureConnection();
+  return db.collection<ServerStatus>('pegasus_server_status');
+};
+
+export const getMinecraftServersCollection = async (): Promise<Collection<ServerStatus>> => {
+  const db = await ensureConnection();
+  return db.collection<ServerStatus>('pegasus_minecraft_servers');
+};
+
+export const getMinecraftServerCommandsCollection = async (): Promise<Collection<MinecraftServerCommand>> => {
+  const db = await ensureConnection();
+  return db.collection<MinecraftServerCommand>('pegasus_minecraft_server_commands');
+};
+
+export const getMinecraftServerLogsCollection = async (): Promise<Collection<MinecraftServerLog>> => {
+  const db = await ensureConnection();
+  return db.collection<MinecraftServerLog>('pegasus_minecraft_server_logs');
 };
 
 // Helper functions
@@ -1695,5 +1794,290 @@ export class DatabaseService {
       },
       { upsert: true }
     );
+  }
+
+  // === MINECRAFT SERVER MANAGEMENT ===
+  
+  static async createMinecraftServer(config: MinecraftServerConfig): Promise<string> {
+    const collection = await getMinecraftServersCollection();
+    
+    const serverId = `${config.userId}_${config.serverName}`;
+    const port = config.port || await this.findAvailablePort(25565);
+    
+    const serverData: Omit<ServerStatus, '_id'> = {
+      id: serverId,
+      userId: config.userId,
+      status: 'creating',
+      port,
+      playerCount: 0,
+      maxPlayers: config.maxPlayers || 20,
+      uptime: 0,
+      lastSeen: new Date(),
+      lastPlayerActivity: new Date(),
+      autoShutdown: true,
+      inactiveShutdownMinutes: 10,
+      serverName: config.serverName,
+      gameMode: config.gameMode || 'survival',
+      difficulty: config.difficulty || 'normal',
+      pvp: true,
+      onlinePlayers: [],
+      config,
+      analytics: {
+        totalPlayers: 0,
+        peakPlayerCount: 0,
+        totalUptime: 0,
+        restartCount: 0,
+        lastRestart: new Date()
+      },
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const result = await collection.insertOne(serverData);
+    return result.insertedId.toString();
+  }
+
+  static async getMinecraftServer(serverId: string): Promise<ServerStatus | null> {
+    const collection = await getMinecraftServersCollection();
+    return await collection.findOne({ id: serverId });
+  }
+
+  static async getUserMinecraftServers(userId: string): Promise<ServerStatus[]> {
+    const collection = await getMinecraftServersCollection();
+    return await collection.find({ userId }).sort({ createdAt: -1 }).toArray();
+  }
+
+  static async updateMinecraftServerStatus(
+    serverId: string, 
+    updates: Partial<ServerStatus>
+  ): Promise<void> {
+    const collection = await getMinecraftServersCollection();
+    await collection.updateOne(
+      { id: serverId },
+      { 
+        $set: { 
+          ...updates,
+          updatedAt: new Date()
+        } 
+      }
+    );
+  }
+
+  static async deleteMinecraftServer(serverId: string): Promise<boolean> {
+    const collection = await getMinecraftServersCollection();
+    const result = await collection.deleteOne({ id: serverId });
+    return result.deletedCount > 0;
+  }
+
+  static async startMinecraftServer(serverId: string): Promise<void> {
+    await this.updateMinecraftServerStatus(serverId, {
+      status: 'starting',
+      lastSeen: new Date()
+    });
+  }
+
+  static async stopMinecraftServer(serverId: string): Promise<void> {
+    await this.updateMinecraftServerStatus(serverId, {
+      status: 'stopping',
+      lastSeen: new Date()
+    });
+  }
+
+  static async restartMinecraftServer(serverId: string): Promise<void> {
+    const collection = await getMinecraftServersCollection();
+    await collection.updateOne(
+      { id: serverId },
+      { 
+        $set: { 
+          status: 'stopping',
+          lastSeen: new Date(),
+          updatedAt: new Date()
+        },
+        $inc: {
+          'analytics.restartCount': 1
+        }
+      }
+    );
+  }
+
+  static async updateServerPlayerActivity(
+    serverId: string, 
+    playerCount: number, 
+    onlinePlayers: string[]
+  ): Promise<void> {
+    const collection = await getMinecraftServersCollection();
+    const updates: any = {
+      playerCount,
+      onlinePlayers,
+      lastSeen: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (playerCount > 0) {
+      updates.lastPlayerActivity = new Date();
+    }
+
+    await collection.updateOne(
+      { id: serverId },
+      { 
+        $set: updates,
+        $max: {
+          'analytics.peakPlayerCount': playerCount
+        }
+      }
+    );
+  }
+
+  static async executeServerCommand(
+    serverId: string, 
+    userId: string, 
+    command: string
+  ): Promise<string> {
+    const commandsCollection = await getMinecraftServerCommandsCollection();
+    
+    const commandData: Omit<MinecraftServerCommand, '_id'> = {
+      serverId,
+      userId,
+      command,
+      timestamp: new Date(),
+      status: 'pending'
+    };
+
+    const result = await commandsCollection.insertOne(commandData);
+    return result.insertedId.toString();
+  }
+
+  static async getServerCommands(
+    serverId: string, 
+    limit: number = 50
+  ): Promise<MinecraftServerCommand[]> {
+    const collection = await getMinecraftServerCommandsCollection();
+    return await collection
+      .find({ serverId })
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .toArray();
+  }
+
+  static async logServerMessage(
+    serverId: string, 
+    userId: string, 
+    level: MinecraftServerLog['level'], 
+    message: string, 
+    source: MinecraftServerLog['source'] = 'server'
+  ): Promise<void> {
+    const collection = await getMinecraftServerLogsCollection();
+    
+    const logData: Omit<MinecraftServerLog, '_id'> = {
+      serverId,
+      userId,
+      level,
+      message,
+      source,
+      timestamp: new Date()
+    };
+
+    await collection.insertOne(logData);
+  }
+
+  static async getServerLogs(
+    serverId: string, 
+    options?: {
+      level?: MinecraftServerLog['level'];
+      source?: MinecraftServerLog['source'];
+      limit?: number;
+      since?: Date;
+    }
+  ): Promise<MinecraftServerLog[]> {
+    const collection = await getMinecraftServerLogsCollection();
+    
+    const query: any = { serverId };
+    if (options?.level) query.level = options.level;
+    if (options?.source) query.source = options.source;
+    if (options?.since) query.timestamp = { $gte: options.since };
+
+    return await collection
+      .find(query)
+      .sort({ timestamp: -1 })
+      .limit(options?.limit || 100)
+      .toArray();
+  }
+
+  static async getServerAnalytics(serverId: string): Promise<any> {
+    const server = await this.getMinecraftServer(serverId);
+    if (!server) return null;
+
+    const logsCollection = await getMinecraftServerLogsCollection();
+    const commandsCollection = await getMinecraftServerCommandsCollection();
+
+    // Get recent activity
+    const recentLogs = await logsCollection.countDocuments({
+      serverId,
+      timestamp: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    });
+
+    const recentCommands = await commandsCollection.countDocuments({
+      serverId,
+      timestamp: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
+    });
+
+    return {
+      server: server.analytics,
+      recentActivity: {
+        logsLast24h: recentLogs,
+        commandsLast24h: recentCommands
+      },
+      status: {
+        uptime: server.uptime,
+        playerCount: server.playerCount,
+        status: server.status
+      }
+    };
+  }
+
+  static async updateAutoShutdownSettings(
+    serverId: string,
+    settings: { enabled: boolean; inactiveMinutes: number }
+  ): Promise<void> {
+    await this.updateMinecraftServerStatus(serverId, {
+      autoShutdown: settings.enabled,
+      inactiveShutdownMinutes: settings.inactiveMinutes
+    });
+  }
+
+  static async getAllRunningServers(): Promise<ServerStatus[]> {
+    const collection = await getMinecraftServersCollection();
+    return await collection.find({ status: 'running' }).toArray();
+  }
+
+  static async findAvailablePort(startPort: number = 25565): Promise<number> {
+    const collection = await getMinecraftServersCollection();
+    const usedPorts = await collection.distinct('port');
+    
+    let port = startPort;
+    while (usedPorts.includes(port)) {
+      port++;
+    }
+    return port;
+  }
+
+  static async getServersByStatus(status: ServerStatus['status']): Promise<ServerStatus[]> {
+    const collection = await getMinecraftServersCollection();
+    return await collection.find({ status }).toArray();
+  }
+  static async getInactiveServers(thresholdMinutes: number = 10): Promise<ServerStatus[]> {
+    const collection = await getMinecraftServersCollection();
+    const threshold = new Date(Date.now() - thresholdMinutes * 60 * 1000);
+    
+    return await collection.find({
+      status: 'running',
+      autoShutdown: true,
+      playerCount: 0,
+      lastPlayerActivity: { $lt: threshold }
+    }).toArray();
+  }
+
+  static async getMinecraftServerCommandsCollection() {
+    return await getMinecraftServerCommandsCollection();
   }
 }
